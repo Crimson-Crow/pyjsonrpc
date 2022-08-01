@@ -1,37 +1,48 @@
 {
-    "$schema": "http://json-schema.org/draft-04/schema#",
-    "description": "A JSON RPC 2.0 request",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "description": "A JSON-RPC 2.0 request",
     "oneOf": [
         {
-            "description": "An individual request",
+            "description": "A request object",
             "$ref": "#/definitions/request"
         },
         {
-            "description": "An array of requests",
+            "description": "A batch request array",
             "type": "array",
-            "items": { "$ref": "#/definitions/request" }
+            "items": {
+                "$ref": "#/definitions/request"
+            }
         }
     ],
     "definitions": {
         "request": {
             "type": "object",
-            "required": [ "jsonrpc", "method" ],
+            "required": [
+                "jsonrpc",
+                "method"
+            ],
             "properties": {
-                "jsonrpc": { "enum": [ "2.0" ] },
+                "jsonrpc": {
+                    "const": "2.0"
+                },
                 "method": {
                     "type": "string"
                 },
-                "id": {
-                    "type": [ "string", "number", "null" ],
-                    "note": [
-                        "While allowed, null should be avoided: http://www.jsonrpc.org/specification#id1",
-                        "While allowed, a number with a fractional part should be avoided: http://www.jsonrpc.org/specification#id2"
+                "params": {
+                    "type": [
+                        "array",
+                        "object"
                     ]
                 },
-                "params": {
-                    "type": [ "array", "object" ]
+                "id": {
+                    "type": [
+                        "string",
+                        "number",
+                        "null"
+                    ]
                 }
-            }
+            },
+            "additionalProperties": false
         }
     }
 }

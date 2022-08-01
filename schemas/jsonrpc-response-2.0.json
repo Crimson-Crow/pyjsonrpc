@@ -1,68 +1,69 @@
 {
-    "$schema": "http://json-schema.org/draft-04/schema#",
-    "description": "A JSON RPC 2.0 response",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "description": "A JSON-RPC 2.0 response",
     "oneOf": [
-        { "$ref": "#/definitions/success" },
-        { "$ref": "#/definitions/error" },
         {
+            "description": "A response object",
+            "$ref": "#/definitions/response"
+        },
+        {
+            "description": "A batch response array",
             "type": "array",
             "items": {
-                "oneOf": [
-                    { "$ref": "#/definitions/success" },
-                    { "$ref": "#/definitions/error" }
-                ]
+                "$ref": "#/definitions/response"
             }
         }
     ],
     "definitions": {
-        "common": {
-            "required": [ "id", "jsonrpc" ],
-            "not": {
-                "description": "cannot have result and error at the same time",
-                "required": [ "result", "error" ]
-            },
+        "response": {
             "type": "object",
-            "properties": {
-                "id": {
-                    "type": [ "string", "integer", "null" ],
-                    "note": [
-                        "spec says a number which should not contain a fractional part",
-                        "We choose integer here, but this is unenforceable with some languages"
+            "required": [
+                "jsonrpc",
+                "id"
+            ],
+            "oneOf": [
+                {
+                    "required": [
+                        "result"
                     ]
                 },
-                "jsonrpc": { "enum": [ "2.0" ] }
-            }
-        },
-        "success": {
-            "description": "A success. The result member is then required and can be anything.",
-            "allOf": [
-                { "$ref": "#/definitions/common" },
-                { "required": [ "result" ] }
-            ]
-        },
-        "error": {
-            "allOf" : [
-                { "$ref": "#/definitions/common" },
                 {
-                    "required": [ "error" ],
-                    "properties": {
-                        "error": {
-                            "type": "object",
-                            "required": [ "code", "message" ],
-                            "properties": {
-                                "code": {
-                                    "type": "integer",
-                                    "note": [ "unenforceable in some languages" ]
-                                },
-                                "message": { "type": "string" },
-                                "data": {
-                                    "description": "optional, can be anything"
-                                }
-                            }
-                        }
-                    }
+                    "required": [
+                        "error"
+                    ]
                 }
-            ]
+            ],
+            "properties": {
+                "jsonrpc": {
+                    "const": "2.0"
+                },
+                "result": {},
+                "error": {
+                    "type": "object",
+                    "required": [
+                        "code",
+                        "message"
+                    ],
+                    "properties": {
+                        "code": {
+                            "type": "integer"
+                        },
+                        "message": {
+                            "type": "string"
+                        },
+                        "data": {}
+                    },
+                    "additionalProperties": false
+                },
+                "id": {
+                    "type": [
+                        "string",
+                        "number",
+                        "null"
+                    ]
+                }
+            },
+            "additionalProperties": false
         }
     }
 }
