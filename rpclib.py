@@ -1,24 +1,27 @@
-from typing import Union, Optional
+import json
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Callable, Any, TypeVar
 
-import orjson
 from jsonschema_rs import JSONSchema
-
 
 REQUEST_VALIDATOR: JSONSchema = JSONSchema.from_str(
     (Path(__file__).parent / 'schemas' / 'jsonrpc-request-2.0.json').read_text())
 RESPONSE_VALIDATOR: JSONSchema = JSONSchema.from_str(
     (Path(__file__).parent / 'schemas' / 'jsonrpc-response-2.0.json').read_text())
 
-
 Error = Request = Response = dict
+
+T = TypeVar('T')
+R = TypeVar('R')
 
 
 class JsonRpc:
-    def __init__(self, methods: Optional[dict] = None):
+    def __init__(self, methods: Optional[dict[str, Callable]] = None, json_loads: Callable[[T], Any] = json.loads,
+                 json_dumps: Callable[..., R] = json.dumps):
         self.methods = methods if methods is not None else {}
+        self._json_loads = json_loads
+        self._json_dumps = json_dumps
 
     def _process_request(self, request: Request) -> Optional[Response]:
         if not REQUEST_VALIDATOR.is_valid(request):
@@ -45,9 +48,9 @@ class JsonRpc:
         if is_not_notification:
             return Response(jsonrpc='2.0', result=result, id=request['id'])
 
-    def _parse_request(self, request_str: str | bytes) -> Optional[dict | list[dict]]:
+    def _parse_request(self, raw_request: T) -> Optional[Response | list[Response]]:
         try:
-            request_obj = orjson.loads(request_str)
+            request_obj: Request | list[Request] = self._json_loads(raw_request)
         except JSONDecodeError as jde:
             return Response(jsonrpc='2.0', error=Error(code=-32700, message='Parse error', data=str(jde)), id=None)
         if isinstance(request_obj, list):  # batch request
@@ -65,6 +68,6 @@ class JsonRpc:
             if response := self._process_request(request_obj):
                 return response
 
-    def call(self, request: str | bytes) -> bytes:
+    def call(self, request: T, **dumps_kwargs) -> R:
         if response := self._parse_request(request):
-            return orjson.dumps(response)  # TODO determine what happens if encoding error
+            return self._json_dumps(response, **dumps_kwargs)  # TODO determine what happens if encoding error
