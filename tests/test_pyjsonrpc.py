@@ -1,12 +1,19 @@
-from rpclib import *
+# import unittest
+#
+#
+# class PyjsonrpcTest(unittest.TestCase):
+#     pass
+
+from pyjsonrpc import *
 # from rpclib_pydantic import JsonRpc as JsonRpcP
 
+import orjson
 
 def setup():
     def asum(*args):
         return sum(args)
     rpc_methods = {'subtract': lambda a, b: a - b, 'sum': asum}
-    return JsonRpc(rpc_methods)
+    return JsonRpc(rpc_methods, json_loads=orjson.loads, json_dumps=orjson.dumps)
 
 # def setup_p():
 #     def asum(*args):
