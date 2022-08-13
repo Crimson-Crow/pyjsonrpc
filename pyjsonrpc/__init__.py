@@ -1,9 +1,9 @@
 import json
-from typing import Optional, Callable, Any, TypeVar, TypedDict, Literal
+from collections.abc import Callable
 from importlib.resources import read_text
+from typing import Optional, Any, TypeVar, TypedDict, Literal, ParamSpec
 
 from jsonschema_rs import JSONSchema
-
 
 REQUEST_VALIDATOR: JSONSchema = JSONSchema.from_str(read_text(__package__, 'jsonrpc-request-2.0.json'))
 RESPONSE_VALIDATOR: JSONSchema = JSONSchema.from_str(read_text(__package__, 'jsonrpc-response-2.0.json'))
@@ -52,12 +52,30 @@ def merge_params(args: tuple, kwargs: dict) -> tuple | dict:
         return args
 
 
+def rpc_method(func_or_name: Callable | str) -> Callable:
+    if callable(func_or_name):
+        func_or_name._rpc_method = None
+        return func_or_name
+    elif isinstance(func_or_name, str):
+        def inner(func):
+            func._rpc_method = func_or_name
+            return func
+        return inner
+    else:
+        raise TypeError('Must be used as a plain decorator or with a single str argument')
+
+
 class JsonRpc:
     def __init__(self, methods: Optional[dict[str, Callable]] = None, json_loads: Callable[[T], Any] = json.loads,
                  json_dumps: Callable[..., R] = json.dumps):
         self.methods = methods or {}
         self._json_loads = json_loads
         self._json_dumps = json_dumps
+
+        for method_name in dir(self):
+            method = getattr(self, method_name)
+            if hasattr(method, '_rpc_method'):
+                self.methods[method._rpc_method or method.__name__] = method
 
     def _run(self, request: Request) -> Optional[Response]:
         if not REQUEST_VALIDATOR.is_valid(request):
@@ -69,7 +87,12 @@ class JsonRpc:
             if not is_not_notification:
                 return
             return Response(jsonrpc='2.0', error=Error(code=-32601, message='Method not found'), id=request['id'])
-        args, kwargs = split_params(request['params'])
+        try:
+            params = request['params']
+        except KeyError:
+            args, kwargs = (), {}
+        else:
+            args, kwargs = split_params(params)
         try:
             result = method(*args, **kwargs)
         except Exception as e:
