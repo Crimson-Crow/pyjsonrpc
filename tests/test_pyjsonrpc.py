@@ -5,21 +5,27 @@
 #     pass
 
 from pyjsonrpc import *
-# from rpclib_pydantic import JsonRpc as JsonRpcP
 
 import orjson
 
-def setup():
-    def asum(*args):
-        return sum(args)
-    rpc_methods = {'subtract': lambda a, b: a - b, 'sum': asum}
-    return JsonRpc(rpc_methods, json_loads=orjson.loads, json_dumps=orjson.dumps)
 
-# def setup_p():
-#     def asum(*args):
-#         return sum(args)
-#     rpc_methods = {'subtract': lambda a, b: a - b, 'sum': asum}
-#     return JsonRpcP(rpc_methods)
+def setup():
+    class Handler(JsonRpc):
+        @rpc_method
+        def subtract(self, a, b):
+            return a - b
+
+        @staticmethod
+        @rpc_method('sum')
+        def asum(*args):
+            return sum(args)
+
+        @rpc_method('get_data')
+        def kekw(self):
+            return str(self)
+
+    # rpc_methods = {'subtract': lambda a, b: a - b, 'sum': asum}
+    return Handler(json_loads=orjson.loads, json_dumps=orjson.dumps)
 
 
 def test(rpc):
@@ -33,12 +39,6 @@ if __name__ == '__main__':
     # print(RESPONSE_VALIDATOR.is_valid({"jsonrpc": "2.0", "id": 3}))
     print(RESPONSE_VALIDATOR.is_valid(Response(jsonrpc='2.0', error=Error(code=-32601, message='Method not found'), id=None)))
 
-
-    def isum(*args):
-        return sum(args)
-
-
-    rpc_methods = {'subtract': lambda a, b: a - b, 'sum': isum}
     rpc = setup()
     req = '[]'
     print(rpc.call(req))
