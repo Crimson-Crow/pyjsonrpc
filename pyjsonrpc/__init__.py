@@ -1,41 +1,59 @@
+import inspect
 import json
+import warnings
 from collections.abc import Callable
+from functools import singledispatch
 from importlib.resources import read_text
-from typing import Optional, Any, TypeVar, TypedDict, Literal, ParamSpec
+from typing import Any, TypeVar, TypedDict, Literal, NotRequired, ParamSpec, Generic
 
 from jsonschema_rs import JSONSchema
 
-REQUEST_VALIDATOR: JSONSchema = JSONSchema.from_str(read_text(__package__, 'jsonrpc-request-2.0.json'))
-RESPONSE_VALIDATOR: JSONSchema = JSONSchema.from_str(read_text(__package__, 'jsonrpc-response-2.0.json'))
+REQUEST_VALIDATOR: JSONSchema = JSONSchema.from_str(
+    read_text(__package__, "jsonrpc-request-2.0.json")
+)
+RESPONSE_VALIDATOR: JSONSchema = JSONSchema.from_str(
+    read_text(__package__, "jsonrpc-response-2.0.json")
+)
+
+ID = str | int | float | None
 
 
-class Error(TypedDict, total=False):
+class Error(TypedDict):
     code: int
     message: str
-    data: Any
+    data: NotRequired[Any]
 
 
-class Request(TypedDict, total=False):
-    jsonrpc: Literal['2.0']
+class Request(TypedDict):
+    jsonrpc: Literal["2.0"]
     method: str
-    params: list | dict
-    id: str | int | float | None
+    params: NotRequired[list | dict]
+    id: NotRequired[ID]
 
 
-class Response(TypedDict, total=False):
-    jsonrpc: Literal['2.0']
-    result: Any
-    error: Error
-    id: str | int | float | None
+class Response(TypedDict):
+    jsonrpc: Literal["2.0"]
+    result: NotRequired[Any]
+    error: NotRequired[Error]
+    id: ID
 
 
-T = TypeVar('T')
-R = TypeVar('R')
+class ErrorType:
+    PARSE_ERROR = Error(code=-32700, message="Parse error")
+    INVALID_REQUEST = Error(code=-32600, message="Invalid Request")
+    METHOD_NOT_FOUND = Error(code=-32601, message="Method not found")
+    INVALID_PARAMS = Error(code=-32602, message="Invalid params")
+    INTERNAL_ERROR = Error(code=-32603, message="Internal error")
+
+
+P = ParamSpec("P")
+T = TypeVar("T")
+R = TypeVar("R")
 
 
 def split_params(params: tuple | dict) -> tuple[tuple, dict]:
     if isinstance(params, dict):
-        args = params.pop('__args', [])
+        args = params.pop("__args", ())
         kwargs = params
     else:
         args = params
@@ -46,49 +64,79 @@ def split_params(params: tuple | dict) -> tuple[tuple, dict]:
 def merge_params(args: tuple, kwargs: dict) -> tuple | dict:
     if kwargs:
         if args:
-            kwargs['__args'] = args
+            kwargs["__args"] = args
         return kwargs
     elif args:
         return args
 
 
-def rpc_method(func_or_name: Callable | str) -> Callable:
-    if callable(func_or_name):
-        func_or_name._rpc_method = None
-        return func_or_name
-    elif isinstance(func_or_name, str):
-        def inner(func):
-            func._rpc_method = func_or_name
-            return func
-        return inner
-    else:
-        raise TypeError('Must be used as a plain decorator or with a single str argument')
+@singledispatch
+def rpc_method(f: Callable[P, R]) -> Callable[P, R]:
+    f._rpc_method = f.__name__
+    return f
 
 
-class JsonRpc:
-    def __init__(self, methods: Optional[dict[str, Callable]] = None, json_loads: Callable[[T], Any] = json.loads,
-                 json_dumps: Callable[..., R] = json.dumps):
+@rpc_method.register
+def _(name: str) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    def decorator(f: Callable[P, R]) -> Callable[P, R]:
+        f._rpc_method = name
+        return f
+
+    return decorator
+
+
+# def rpc_method(func_or_name: Callable | str) -> Callable:
+#     if callable(func_or_name):
+#         func_or_name._rpc_method = None
+#         return func_or_name
+#     elif isinstance(func_or_name, str):
+#
+#         def inner(func):
+#             func._rpc_method = func_or_name
+#             return func
+#
+#         return inner
+#     else:
+#         raise TypeError(
+#             "Must be used as a plain decorator or with a single str argument"
+#         )
+
+
+class JsonRpc(Generic[T, R]):
+    def __init__(
+        self,
+        methods: dict[str, Callable] | None = None,
+        skip_validation: bool = False,
+        json_loads: Callable[[T], Any] = json.loads,
+        json_dumps: Callable[..., R] = json.dumps,
+    ):
         self.methods = methods or {}
+        self.skip_validation = skip_validation
         self._json_loads = json_loads
         self._json_dumps = json_dumps
 
         for method_name in dir(self):
             method = getattr(self, method_name)
-            if hasattr(method, '_rpc_method'):
-                self.methods[method._rpc_method or method.__name__] = method
+            try:
+                self.methods[method._rpc_method] = method
+            except AttributeError:
+                continue
 
-    def _run(self, request: Request) -> Optional[Response]:
-        if not REQUEST_VALIDATOR.is_valid(request):
-            return Response(jsonrpc='2.0', error=Error(code=-32600, message='Invalid Request'), id=None)
-        is_not_notification = 'id' in request
+    def _run(self, request: Request) -> Response | None:
+        if not self.skip_validation and not REQUEST_VALIDATOR.is_valid(request):
+            return Response(jsonrpc="2.0", error=ErrorType.INVALID_REQUEST, id=None)
+
+        is_notif = "id" not in request
         try:
-            method = self.methods[request['method']]
+            method = self.methods[request["method"]]
         except KeyError:
-            if not is_not_notification:
+            if is_notif:
                 return
-            return Response(jsonrpc='2.0', error=Error(code=-32601, message='Method not found'), id=request['id'])
+            return Response(
+                jsonrpc="2.0", error=ErrorType.METHOD_NOT_FOUND, id=request["id"]
+            )
         try:
-            params = request['params']
+            params = request["params"]
         except KeyError:
             args, kwargs = (), {}
         else:
@@ -96,33 +144,60 @@ class JsonRpc:
         try:
             result = method(*args, **kwargs)
         except Exception as e:
-            if not is_not_notification:
-                return
+            error = ErrorType.INTERNAL_ERROR
             if isinstance(e, TypeError):  # TODO validate Invalid params implementation
-                return Response(jsonrpc='2.0', error=Error(code=-32602, message='Invalid params', data=str(e)), id=request['id'])
-            else:
-                return Response(jsonrpc='2.0', error=Error(code=-32603, message='Internal error', data=str(e)), id=request['id'])
-        if is_not_notification:
-            return Response(jsonrpc='2.0', result=result, id=request['id'])
+                try:
+                    inspect.signature(method).bind(*args, **kwargs)
+                except TypeError:
+                    error = ErrorType.INVALID_PARAMS
 
-    def call(self, raw_request: T, **dumps_kwargs) -> Optional[R]:
+            if error == ErrorType.INTERNAL_ERROR:
+                warnings.warn(RuntimeWarning(e))
+
+            if is_notif:
+                return
+            return Response(
+                jsonrpc="2.0", error=error | {"data": str(e)}, id=request["id"]
+            )
+        if not is_notif:
+            return Response(jsonrpc="2.0", result=result, id=request["id"])
+
+    def call(self, raw_request: T, **dumps_kwargs) -> R | None:
         try:
             request = self._json_loads(raw_request)
         except Exception as e:
-            return Response(jsonrpc='2.0', error=Error(code=-32700, message='Parse error', data=str(e)), id=None)
-        if response := [r for r in map(self._run, request) if r] if isinstance(request, list) else self._run(request):
-            return self._json_dumps(response, **dumps_kwargs)  # TODO determine what happens if encoding error
+            response = Response(
+                jsonrpc="2.0",
+                error=Error(**ErrorType.PARSE_ERROR, data=str(e)),
+                id=None,
+            )
+        else:
+            response = (
+                [r for r in map(self._run, request) if r]
+                if isinstance(request, list)
+                else self._run(request)
+            )
+        return self._json_dumps(response, **dumps_kwargs) if response else None
+        # TODO determine what happens if encoding error
 
 
-class JsonClient:
-    def __init__(self, id_factory: Callable, json_loads=json.loads, json_dumps=json.dumps):
-        self.id_factory = id_factory
-        self._json_loads = json_loads
-        self._json_dumps = json_dumps
-
-    def build_request(self, method: str, *args, **kwargs):
-        return self._json_dumps(Request(jsonrpc='2.0', method=method, params=merge_params(args, kwargs),
-                                        id=self.id_factory()))
+# class JsonClient:
+#     def __init__(
+#         self, id_factory: Callable, json_loads=json.loads, json_dumps=json.dumps
+#     ):
+#         self.id_factory = id_factory
+#         self._json_loads = json_loads
+#         self._json_dumps = json_dumps
+#
+#     def build_request(self, method: str, *args, **kwargs):
+#         return self._json_dumps(
+#             Request(
+#                 jsonrpc="2.0",
+#                 method=method,
+#                 params=merge_params(args, kwargs),
+#                 id=self.id_factory(),
+#             )
+#         )
 
 
 # class JsonRpcError(RuntimeError):
