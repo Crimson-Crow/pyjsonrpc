@@ -1,0 +1,100 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyjsonrpc"
+description = "A flexible Python implementation of the JSON-RPC 2.0 protocol."
+authors = [{ name = "Crimson-Crow", email = "github@crimsoncrow.dev" }]
+maintainers = [{ name = "Crimson-Crow", email = "github@crimsoncrow.dev" }]
+readme = "README.md"
+requires-python = ">=3.8"
+license = { file = "LICENSE.txt" }
+keywords = ["jsonrpc", "json-rpc", "rpc", "json", "server", "client"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3 :: Only",
+  "Typing :: Typed",
+]
+dependencies = ["orjson"]
+dynamic = ["version"]
+
+[project.urls]
+"Homepage" = "https://github.com/Crimson-Crow/pyjsonrpc"
+"Bug Reports" = "https://github.com/Crimson-Crow/pyjsonrpc/issues"
+"Source" = "https://github.com/Crimson-Crow/pyjsonrpc"
+
+[tool.setuptools.dynamic]
+version = {attr = "pyjsonrpc.__version__"}
+
+[tool.setuptools_scm]
+
+[tool.mypy]
+python_version = "3.8"
+
+[tool.ruff]
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["PT027", "PT009", "RUF012", "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107", "ANN101", "ANN401", "COM812", "ISC001", "E501"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.coverage.run]
+branch = true
+parallel = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 100
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+envlist = py{38,39,310,311,312},coverage
+
+[testenv]
+description = run the test driver with {basepython}
+deps =
+    coverage[toml]
+setenv =
+    COVERAGE_FILE={toxworkdir}/.coverage
+commands =
+    coverage run -m unittest discover
+
+[testenv:coverage]
+description = combine coverage data and create report
+deps = coverage[toml]
+depends = py{38,39,310,311,312}
+skip_install = True
+commands =
+    coverage combine -q
+    coverage report
+parallel_show_output = True
+
+# Release tooling
+[testenv:build]
+deps = build
+skip_install = true
+commands = python -m build
+
+[testenv:release]
+deps =
+    {[testenv:build]deps}
+    twine
+skip_install = true
+commands =
+    {[testenv:build]commands}
+    twine upload --skip-existing dist/*
+"""
