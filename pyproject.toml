@@ -21,6 +21,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3 :: Only",
   "Typing :: Typed",
 ]
@@ -62,7 +63,7 @@ fail_under = 100
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py{38,39,310,311,312},coverage
+envlist = py{38,39,310,311,312,313},coverage
 
 [testenv]
 description = run the test driver with {basepython}
@@ -76,25 +77,10 @@ commands =
 [testenv:coverage]
 description = combine coverage data and create report
 deps = coverage[toml]
-depends = py{38,39,310,311,312}
+depends = py{38,39,310,311,312,313}
 skip_install = True
 commands =
     coverage combine -q
     coverage report
 parallel_show_output = True
-
-# Release tooling
-[testenv:build]
-deps = build
-skip_install = true
-commands = python -m build
-
-[testenv:release]
-deps =
-    {[testenv:build]deps}
-    twine
-skip_install = true
-commands =
-    {[testenv:build]commands}
-    twine upload --skip-existing dist/*
 """
