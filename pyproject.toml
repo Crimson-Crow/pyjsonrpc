@@ -29,9 +29,9 @@ dependencies = ["orjson"]
 dynamic = ["version"]
 
 [project.urls]
-"Homepage" = "https://github.com/Crimson-Crow/pyjsonrpc"
-"Bug Reports" = "https://github.com/Crimson-Crow/pyjsonrpc/issues"
-"Source" = "https://github.com/Crimson-Crow/pyjsonrpc"
+"Homepage" = "https://github.com/Crimson-Crow/pyjsonrpc2"
+"Bug Reports" = "https://github.com/Crimson-Crow/pyjsonrpc2/issues"
+"Source" = "https://github.com/Crimson-Crow/pyjsonrpc2"
 
 [tool.setuptools.dynamic]
 version = {attr = "pyjsonrpc2.__version__"}
