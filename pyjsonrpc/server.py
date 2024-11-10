@@ -13,8 +13,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     F = TypeVar("F", bound=Callable[..., Any])
 
-
-_LOGGER = logging.getLogger("pyjsonrpcserver")
+_LOGGER = logging.getLogger(__name__)
 _SENTINEL = object()
 _ID = (str, int, float, type(None))
 _REQUEST_KEYS = frozenset(("jsonrpc", "method", "params", "id"))
@@ -94,10 +93,8 @@ class JsonRpcServer:
 
     def add_object(self, obj: Any, *, prefix: str = "") -> None:
         for name, method in inspect.getmembers(obj, inspect.isroutine):
-            try:
-                self.add_method(method, name=prefix + (method.__rpc__ or name))  # type: ignore[union-attr]
-            except AttributeError:  # noqa: PERF203
-                continue
+            if hasattr(method, "__rpc__"):
+                self.add_method(method, name=prefix + (method.__rpc__ or name))
 
     def add_method(
         self, method: Callable[..., Any], *, name: str | None = None
@@ -182,7 +179,7 @@ class JsonRpcServer:
                 raise
         except Exception as e:
             _LOGGER.exception(
-                "[id: %s] An exception occurred while calling rpc method '%s'",
+                "RPC Error [id: %s] [method: '%s'] Uncaught exception",
                 "notification" if id is _SENTINEL else str(id),
                 method_name,
             )
@@ -225,7 +222,7 @@ class JsonRpcServer:
                 msg = "Should never happen: we are joining fragments of already serialized responses if this is a batch at this point"
                 raise RuntimeError(msg) from e  # noqa: TRY004
             id = response["id"]  # noqa: A001
-            _LOGGER.exception("[id:%s] Unserializable response", str(id))
+            _LOGGER.exception("RPC Error [id:%s] Unserializable response", str(id))
             return self._encode(_respond(_Error.INTERNAL_ERROR, id=id, error=str(e)))
 
     def call(self, request: bytes | bytearray | memoryview | str) -> bytes | None:
