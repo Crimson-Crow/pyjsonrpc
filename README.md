@@ -9,10 +9,11 @@ A flexible Python implementation of the JSON-RPC 2.0 protocol (currently server-
 
 ## Key features
 - Full compliance with the [JSON-RPC 2.0 specification](https://www.jsonrpc.org/specification)
+- No transport functionality
 - Multiple method registration patterns (class-based, individual methods, lambda, etc.)
 - Automatic & custom error handling capabilities
 - Support for both string and bytes input
-- Type-safe implementation
+- Complete type hints (passes `mypy --strict`)
 - Extensive unit tests
 - [Semantic versioning](https://semver.org/) adherence
 
@@ -128,7 +129,7 @@ The simplest way to run tests is:
 python -m unittest
 ```
 
-As a more robust alternative, you can install [`tox`](https://tox.readthedocs.io/en/latest/install.html) to automatically test across the supported python versions, then run:
+As a more robust alternative, you can install [`tox`](https://tox.wiki) to automatically test across the supported python versions, then run:
 
 ```bash
 tox -p
