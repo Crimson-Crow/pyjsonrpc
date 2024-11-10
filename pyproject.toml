@@ -3,7 +3,7 @@ requires = ["setuptools>=64", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pyjsonrpc"
+name = "pyjsonrpc2"
 description = "A flexible Python implementation of the JSON-RPC 2.0 protocol."
 authors = [{ name = "Crimson-Crow", email = "github@crimsoncrow.dev" }]
 maintainers = [{ name = "Crimson-Crow", email = "github@crimsoncrow.dev" }]
@@ -34,7 +34,7 @@ dynamic = ["version"]
 "Source" = "https://github.com/Crimson-Crow/pyjsonrpc"
 
 [tool.setuptools.dynamic]
-version = {attr = "pyjsonrpc.__version__"}
+version = {attr = "pyjsonrpc2.__version__"}
 
 [tool.setuptools_scm]
 

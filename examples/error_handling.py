@@ -1,8 +1,8 @@
-"""This example module details how error handling works in pyjsonrpc."""
+"""This example module details how error handling works in pyjsonrpc2."""
 
 # ruff: noqa
 # mypy: ignore-errors
-from pyjsonrpc.server import JsonRpcError, JsonRpcServer, rpc_method
+from pyjsonrpc2.server import JsonRpcError, JsonRpcServer, rpc_method
 
 
 class AdvancedMathServer(JsonRpcServer):

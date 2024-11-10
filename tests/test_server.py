@@ -4,7 +4,7 @@ import json
 import unittest
 from typing import Any, NoReturn
 
-from pyjsonrpc.server import JsonRpcError, JsonRpcServer, rpc_method
+from pyjsonrpc2.server import JsonRpcError, JsonRpcServer, rpc_method
 
 
 class Handler(JsonRpcServer):

@@ -3,7 +3,7 @@
 # ruff: noqa
 # mypy: ignore-errors
 import math
-from pyjsonrpc.server import JsonRpcServer, rpc_method
+from pyjsonrpc2.server import JsonRpcServer, rpc_method
 
 
 # Methods marked with the @rpc_method decorator will automatically be registered when creating an instance.

@@ -1,4 +1,9 @@
-# pyjsonrpc
+# pyjsonrpc2
+
+[![PyPI](https://img.shields.io/pypi/v/pyjsonrpc2)](https://pypi.org/project/pyjsonrpc2/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pyjsonrpc2)](https://pypi.org/project/pyjsonrpc2/)
+[![GitHub](https://img.shields.io/github/license/Crimson-Crow/pyjsonrpc2)](https://github.com/Crimson-Crow/pyjsonrpc2/blob/main/LICENSE.txt)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://makeapullrequest.com)
 
 A flexible Python implementation of the JSON-RPC 2.0 protocol (currently server-side only).
 
@@ -16,7 +21,7 @@ A flexible Python implementation of the JSON-RPC 2.0 protocol (currently server-
 To install the package, use [pip](https://pip.pypa.io/en/stable/):
 
 ```bash
-pip install pyjsonrpc
+pip install pyjsonrpc2
 ```
 
 ## Usage
@@ -26,7 +31,7 @@ For more info, check the `/examples` directory.
 ### Basic Server Creation
 
 ```python
-from pyjsonrpc.server import JsonRpcServer, rpc_method, JsonRpcError
+from pyjsonrpc2.server import JsonRpcServer, rpc_method, JsonRpcError
 
 # Create a basic server
 server = JsonRpcServer()
@@ -131,8 +136,8 @@ tox -p
 
 ## Issue tracker
 
-Please report any bugs or enhancement ideas using the [issue tracker](https://github.com/Crimson-Crow/pyjsonrpc/issues).
+Please report any bugs or enhancement ideas using the [issue tracker](https://github.com/Crimson-Crow/pyjsonrpc2/issues).
 
 ## License
 
-`pyjsonrpc` is licensed under the terms of the [MIT License](https://github.com/Crimson-Crow/pyjsonrpc/blob/main/LICENSE.txt).
+`pyjsonrpc2` is licensed under the terms of the [MIT License](https://github.com/Crimson-Crow/pyjsonrpc2/blob/main/LICENSE.txt).
